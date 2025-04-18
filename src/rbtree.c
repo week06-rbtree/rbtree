@@ -45,7 +45,7 @@ node_t *rbtree_insert(rbtree *t, const key_t key)
   new_node->key = key;          // 키값 할당
   new_node->left = t->nil;      // 새 노드의 레프트와 라이트는 항상 경계 노드 가리킴
   new_node->right = t->nil;
-  new_node->parent = NULL;
+  new_node->parent = t->nil;
   node_t *parent_node = NULL;
 
   if (t->root == t->nil) // 만약 트리가 비어있으면
@@ -129,10 +129,20 @@ int rbtree_erase(rbtree *t, node_t *p)
 {
   if (t->root != p && p->left == t->nil && p->right == t->nil) // 루트가 아닌 리프 노드 삭제 시
   {
-    delete_my_position(p, p->parent, t); // 그냥 삭제하면 됨 !!
-    free(p);
+    if (p->color == RBTREE_RED)
+    {
+      delete_my_position(p, p->parent, t); // 그냥 삭제하면 됨 !!
+      free(p);
+    }
+    else
+    {
+      double_black_check(p, t);
+      delete_my_position(p, p->parent, t);
+      free(p);
+    }
     return 1;
   }
+
   // 인터널 노드 삭제시에는?
   node_t *predecessor = find_predecessor(p, t);
   if (predecessor == t->root)     // 찾은 후계자가 그냥 루트라면?
@@ -155,13 +165,15 @@ int rbtree_erase(rbtree *t, node_t *p)
   if (predecessor->color == RBTREE_RED) // 후계자가 RED이면 문제없음!! 그냥 삭제
   {
     delete_my_position(predecessor, predecessor->parent, t);
-    free(predecessor);
-    return 1;
   }
   else // 후계자가 BLACK인 경우... 더블 블랙 체크를 해 줘야함
   {
     double_black_check(predecessor, t);                      // 더블 블랙 체크
     delete_my_position(predecessor, predecessor->parent, t); // 내 포지션 없애기
+  }
+
+  if (predecessor != t->nil)
+  {
     free(predecessor);
     return 1;
   }
@@ -373,11 +385,11 @@ void double_black_check(node_t *cur, rbtree *tree) // 재귀적으로 더블 블
   if (brother->color == RBTREE_RED) // 형제 노드가 레드일 때
   {
     brother->color = RBTREE_BLACK;     // 형제를 블랙으로
-    parent->color = RBTREE_RED;        // 형제를 레드로
+    parent->color = RBTREE_RED;        // 부모를 레드로
     if (is_my_position_right(brother)) // 형제의 위치를 기준으로 회전
-      left_rotate(tree, brother);
+      left_rotate(tree, parent);
     else
-      right_rotate(tree, brother);
+      right_rotate(tree, parent);
     double_black_check(cur, tree); // 회전은 했지만 아직 현재 노드의 이중 블랙은 해결되지 않았다 !!
   }
   else // 형제 노드가 블랙일 때
@@ -402,7 +414,7 @@ void double_black_check(node_t *cur, rbtree *tree) // 재귀적으로 더블 블
           left_sibling->color = RBTREE_BLACK; // 왼쪽 조카를 블랙으로
           right_rotate(tree, parent);         // 우회전 수행
         }
-        else if (right_sibling == RBTREE_RED) // 형제와 다른 방향의 조카만 레드일 때
+        else if (right_sibling->color == RBTREE_RED) // 형제와 다른 방향의 조카만 레드일 때
         {
           right_sibling->color = RBTREE_BLACK;
           brother->color = RBTREE_RED;
@@ -424,7 +436,7 @@ void double_black_check(node_t *cur, rbtree *tree) // 재귀적으로 더블 블
           right_sibling->color = RBTREE_BLACK; // 조카의 색깔은 블랙으로
           left_rotate(tree, parent);           // 우회전 수행
         }
-        else if (left_sibling == RBTREE_RED) // 형제와 다른 방향의 조카만 레드일 때
+        else if (left_sibling->color == RBTREE_RED) // 형제와 다른 방향의 조카만 레드일 때
         {
           left_sibling->color = RBTREE_BLACK;
           brother->color = RBTREE_RED;
