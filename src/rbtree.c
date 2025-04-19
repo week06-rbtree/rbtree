@@ -166,10 +166,27 @@ int rbtree_erase(rbtree *t, node_t *p)
   {
     delete_my_position(predecessor, predecessor->parent, t);
   }
-  else // 후계자가 BLACK인 경우... 더블 블랙 체크를 해 줘야함
+  else // 후계자가 BLACK인 경우... 더블 블랙 체크를 해 주거나 자식을 올려준다
   {
-    double_black_check(predecessor, t);                      // 더블 블랙 체크
-    delete_my_position(predecessor, predecessor->parent, t); // 내 포지션 없애기
+    if (predecessor->left->color == RBTREE_RED) // 후계자의 자식 중 하나가 레드
+    {
+      node_t *child = predecessor->left;
+      child->color = RBTREE_BLACK;           // 블랙으로 바꾸어주고
+      if (is_my_position_right(predecessor)) // 후계자가 만약에 오른쪽 노드라면
+      {
+        predecessor->parent->right = child;
+      }
+      else
+      {
+        predecessor->parent->left = child;
+      }
+      child->parent = predecessor->parent; // 후계자의 자식의 부모를 후계자의 부모로
+    }
+    else // 후계자가 모두 블랙
+    {
+      double_black_check(predecessor, t);                      // 더블 블랙 체크
+      delete_my_position(predecessor, predecessor->parent, t); // 내 포지션 없애기
+    }
   }
 
   if (predecessor != t->nil)
