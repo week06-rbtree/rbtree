@@ -15,7 +15,7 @@ rbtree *new_rbtree(void) {
 }
 
 void delete_rbtree(rbtree *t) {
-  // TODO: reclaim the tree nodes's memory
+  // 
   free(t);
 }
 
@@ -142,6 +142,72 @@ node_t *rbtree_min(const rbtree *t) {
 node_t *rbtree_max(const rbtree *t) {
   // TODO: implement find
   return t->root;
+}
+
+void rbtree_transplant(rbtree *t, node_t *u, node_t *v) {
+  if (u->parent == t->nil) {
+    t->root = v;
+  } else if (u == u->left) {
+    u->parent->left = v;
+  } else {
+    u->parent->right = v;
+  }
+  v->parent = u->parent;
+}
+
+void rbtree_erase_fixup(rbtree *t, node_t *x) {
+#ifdef SENTINEL
+  while ((x != t->root) && (x->color == RBTREE_BLACK)) {
+    if (x == x->parent->left) {
+      node_t *w = x->parent->right;
+      if (w->color == RBTREE_RED) {
+        w->color = RBTREE_BLACK;
+        x->parent->color = RBTREE_RED;
+        left_rotate(t, x->parent);
+        w = x->parent->right;
+      }
+      if ((w->left->color == RBTREE_BLACK) && (w->right->color == RBTREE_BLACK)) {
+        w->color = RBTREE_RED;
+        x = x->parent;
+      } else if (w->right->color == RBTREE_BLACK) {
+        w->left->color == RBTREE_BLACK;
+        w->color = RBTREE_RED;
+        right_rotate(t, w);
+        w = x->parent->right;
+      } else {
+        w->color = x->parent->color;
+        x->parent->color = RBTREE_BLACK;
+        w->right->color = RBTREE_BLACK;
+        left_rotate(t, x->parent);
+        x = t->root;  
+      }
+    } else {
+      node_t *w = x->parent->left;
+      if (w->color == RBTREE_RED) {
+        w->color = RBTREE_BLACK;
+        x->parent->color = RBTREE_RED;
+        right_rotate(t, x->parent);
+        w = x->parent->left;
+      }
+      if ((w->right->color == RBTREE_BLACK) && (w->left->color == RBTREE_BLACK)) {
+        w->color = RBTREE_RED;
+        x = x->parent;
+      } else if (w->left->color == RBTREE_BLACK) {
+        w->right->color == RBTREE_BLACK;
+        w->color = RBTREE_RED;
+        left_rotate(t, w);
+        w = x->parent->left;
+      } else {
+        w->color = x->parent->color;
+        x->parent->color = RBTREE_BLACK;
+        w->left->color = RBTREE_BLACK;
+        right_rotate(t, x->parent);
+        x = t->root;  
+      }
+    }
+  } 
+#endif
+  x->color = RBTREE_BLACK;
 }
 
 int rbtree_erase(rbtree *t, node_t *p) {
