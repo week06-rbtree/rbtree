@@ -1,10 +1,16 @@
 #include "rbtree.h"
-
+#include <stdio.h>
 #include <stdlib.h>
 
 rbtree *new_rbtree(void) {
   rbtree *p = (rbtree *)calloc(1, sizeof(rbtree));
-  // TODO: initialize struct if needed
+#ifdef SENTINEL
+  node_t *nil = (node_t *)calloc(1, sizeof(node_t));
+  nil->color = RBTREE_BLACK;
+  nil->left = nil->right = nil->parent = NULL; // calloc으로 nil을 초기화해서 left, right, parent도 0(==NULL)로 초기화되어있지만 코드 명시성과 방어로직을 위해 해당 코드 작성
+  p->nil = nil;
+  p->root = nil;
+#endif
   return p;
 }
 
