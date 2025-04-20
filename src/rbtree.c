@@ -19,8 +19,113 @@ void delete_rbtree(rbtree *t) {
   free(t);
 }
 
+void right_rotate(rbtree *t, node_t *x) {
+  node_t *y = x->left;
+  x->left = y->right;
+  if (y->right != t->nil) {
+    y->right->parent = x;
+  }
+  y->parent = x->parent;
+  if (x->parent == t->nil) {
+    t->root = y;
+  } else if (x == x->parent->left) {
+    x->parent->left = y;
+  } else {
+    x->parent->right = y;
+  }
+  y->right = x;
+  x->parent = y;
+}
+
+void left_rotate(rbtree *t, node_t *x) {
+  node_t *y = x->right; // x의 오른쪽 자식을 y로 설정
+  x->right = y->left; // x의 오른쪽 자식에 y의 왼쪽 자식을 데려옴
+  if (y->left != t->nil) { // y의 왼쪽 자식이 nil이 아니라면 y의 왼쪽 자식의 부모로 x를 설정
+    y->left->parent = x;
+  }
+  y->parent = x->parent; // y의 부모를 x의 기존 부모로 설정
+  if (x->parent == t->nil) {
+    t->root = y;
+  } else if (x == x->parent->left) {
+    x->parent->left = y;
+  } else {
+    x->parent->right = y;
+  }
+  y->left = x;
+  x->parent = y;
+}
+
+void insert_fixup(rbtree *t, node_t *new) {
+  while (new->parent->color == RBTREE_RED) {
+    if (new->parent == new->parent->parent->left) {
+      node_t *y = new->parent->parent->right;
+      if (y->color == RBTREE_RED) {
+        new->parent->color = RBTREE_BLACK;
+        y->color = RBTREE_BLACK;
+        new->parent->parent->color = RBTREE_RED;
+        new = new->parent->parent;
+      } else if (new == new->parent->left) {
+        new = new->parent;
+        left_rotate(t, new);
+        new->parent->color = RBTREE_BLACK;
+        new->parent->parent->color = RBTREE_RED;
+        right_rotate(t, new->parent->parent);
+      }
+    } else {
+      node_t *y = new->parent->parent->left;
+      if (y->color == RBTREE_RED) {
+        new->parent->color = RBTREE_BLACK;
+        y->color = RBTREE_BLACK;
+        new->parent->parent->color = RBTREE_RED;
+        new = new->parent->parent;
+      } else if (new == new->parent->right) {
+        new = new->parent;
+        right_rotate(t, new);
+        new->parent->color = RBTREE_BLACK;
+        new->parent->parent->color = RBTREE_RED;
+        left_rotate(t, new->parent->parent);
+      }
+    }
+  }
+}
+
 node_t *rbtree_insert(rbtree *t, const key_t key) {
-  // TODO: implement insert
+#ifdef SENTINEL
+  node_t *y = t->nil;
+  node_t *x = t->root;
+
+  // 삽입할 노드 초기화
+  node_t *new = (node_t *)calloc(1, sizeof(node_t));
+  new->color = RBTREE_RED;
+  new->key = key;
+  new->left = new->right = new->parent = NULL;
+
+  while (x != t->nil) {
+    y = x;
+    if (new->key < x->key) {
+      x = x->left;
+    } else {
+      x = x->right;
+    }
+  }
+
+  new->parent = y;
+  if (y == t->nil) {
+    t->root = new;
+  } else if (new->key < y->key) {
+    new->left = new;
+  } else {
+    y->left = new;
+  }
+
+  new->left = t->nil;
+  new->right = t->nil;
+  new->color = RBTREE_RED;
+
+  insert_fixup(t, new);
+
+  t->root->color = RBTREE_BLACK;
+#endif
   return t->root;
 }
 
