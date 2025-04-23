@@ -353,6 +353,14 @@ void double_black_check(node_t *cur, rbtree *tree) {
   }
 }
 
+int is_left(node_t *cur) {
+  if (cur == cur->parent->left) {
+    return 1;
+  } else {
+    return 0;
+  }
+}
+
 rbtree *new_rbtree(void) {
   rbtree *p = (rbtree *)calloc(1, sizeof(rbtree));
 #ifdef SENTINEL
@@ -365,16 +373,9 @@ rbtree *new_rbtree(void) {
   return p;
 }
 
-int is_left(node_t *cur) {
-  if (cur == cur->parent->left) {
-    return 1;
-  } else {
-    return 0;
-  }
-}
-
 void delete_rbtree(rbtree *t) {
-  // TODO: reclaim the tree nodes's memory
+  postorder(t, t->root);
+  free(t->nil);
   free(t);
 }
 
