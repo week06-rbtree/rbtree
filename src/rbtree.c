@@ -130,6 +130,91 @@ void rbtree_transplant(rbtree *t, node_t *u, node_t *v) {
   v->parent = u->parent;
 }
 
+void rbtree_erase_fixup(rbtree *t, node_t *x) {
+  #ifdef SENTINEL
+    while ((x != t->root) && (x->color == RBTREE_BLACK)) {
+      if (x == x->parent->left) {
+        node_t *w = x->parent->right;
+        if (w->color == RBTREE_RED) {
+          w->color = RBTREE_BLACK;
+          x->parent->color = RBTREE_RED;
+          left_rotate(t, x->parent);
+          w = x->parent->right;
+        }
+        if ((w->left->color == RBTREE_BLACK) && (w->right->color == RBTREE_BLACK)) {
+          w->color = RBTREE_RED;
+          x = x->parent;
+        } else if (w->right->color == RBTREE_BLACK) {
+          w->left->color == RBTREE_BLACK;
+          w->color = RBTREE_RED;
+          right_rotate(t, w);
+          w = x->parent->right;
+        } else {
+          w->color = x->parent->color;
+          x->parent->color = RBTREE_BLACK;
+          w->right->color = RBTREE_BLACK;
+          left_rotate(t, x->parent);
+          x = t->root;  
+        }
+      } else {
+        node_t *w = x->parent->left;
+        if (w->color == RBTREE_RED) {
+          w->color = RBTREE_BLACK;
+          x->parent->color = RBTREE_RED;
+          right_rotate(t, x->parent);
+          w = x->parent->left;
+        }
+        if ((w->right->color == RBTREE_BLACK) && (w->left->color == RBTREE_BLACK)) {
+          w->color = RBTREE_RED;
+          x = x->parent;
+        } else if (w->left->color == RBTREE_BLACK) {
+          w->right->color == RBTREE_BLACK;
+          w->color = RBTREE_RED;
+          left_rotate(t, w);
+          w = x->parent->left;
+        } else {
+          w->color = x->parent->color;
+          x->parent->color = RBTREE_BLACK;
+          w->left->color = RBTREE_BLACK;
+          right_rotate(t, x->parent);
+          x = t->root;  
+        }
+      }
+    } 
+  #endif
+    x->color = RBTREE_BLACK;
+  }
+  
+node_t *find_insert_location(rbtree *tree, node_t *node, key_t key) {
+  /*
+  노드 삽입 직전 위치 반환
+  이 함수를 호출해서 노드 삽입 직전 위치를 반환받았다면 키값을 검사해서 left나 right 중 하나에 삽입해야 한다.
+  */
+  if (key < node->key) {
+  return (node->left != tree->nil)
+    ? find_insert_location(tree, node->left, key)
+    : node;
+  } else {
+  return (node->right != tree->nil)
+    ? find_insert_location(tree, node->right, key)
+    : node;
+  }
+}
+
+node_t *find_successor(node_t *cur_node, rbtree *tree) {
+  /*
+  cur_node 기준 오른쪽 서브트리에서 가장 작은 값을 가진 노드 포인터 반환
+  */
+  node_t *temp = cur_node; // 현재 노드로 설정
+  if (temp->right != tree->nil) { // 오른쪽 자식이 있다면
+    temp = temp->right; // 현재 노드를 오른쪽 자식으로 이동 
+    while (temp->left != tree->nil) { // 왼쪽 자식이 존재할 때까지만
+      temp = temp->left; // 현재 노드를 왼쪽 자식으로 이동
+    }
+  }
+  return temp; // cur_node의 successor 반환
+}
+
 rbtree *new_rbtree(void) {
   rbtree *p = (rbtree *)calloc(1, sizeof(rbtree));
 #ifdef SENTINEL
