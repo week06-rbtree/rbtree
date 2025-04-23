@@ -263,6 +263,96 @@ void red_red_violation_check(rbtree *tree, node_t *node) {
   }
 }
 
+void double_black_check(node_t *cur, rbtree *tree) {
+  /*
+  case 1. 자식이 RED인 경우
+    : 노드를 자식으로 대체 후 검정으로 변경 
+  case 2. 형제가 RED인 경우
+    : 형제를 BLACK으로, 부모를 RED로 + 부모 회전 + 더블블랙 처리
+     - 회전: 형제가 오른쪽 자식이면 좌회전, 형제가 왼쪽 자식이면 우회전
+     - 더블 블랙 처리:
+      1) 새로운 형제가 블랙 + 조카 모두 블랙
+      2) 새로운 형제가 블랙 조카 1개는 RED
+  case 3. 형제, 두 조카 모두 BLACK인 경우
+    : 형제 RED로 바꾸고 부모에게 이중블랙 전파
+       - 부모가 레드라면, 다음 double_black_check에서 BLACK으로 바뀌고 끝
+       - 부모가 블랙이라면, doubly black 해결될 때까지 재귀적으로 이중블랙 처리
+  case 4. 형제 BLACK, 조카는 한 개 이상 RED인 경우
+     1) 형제 반대 방향 조카만 RED : RL(부모-형제) 또는 LR(부모-형제)
+        // 조카-형제 회전해서 형제와 같은 방향에 RED가 있는 경우로 만들기
+        - 조카 색깔을 BLACK으로
+        - 형제 색깔을 RED로
+        - 형제 회전(RL이었다면 우회전, LR이었다면 좌회전)
+        - 새로운 형제 찾기
+        - 새로운 조카 찾기
+        => 색 재조정, 회전으로 균형 회복
+     2) 형제와 같은 방향에 RED가 있는 경우 : LL(부모-형제) 또는 RR(부모-형제)
+        // 색 재조정, 회전으로 균형 회복
+        - 형제 색깔을 부모의 색깔로
+        - 부모를 BLACK으로
+        - 왼쪽 조카를 BLACK으로
+        - 부모 회전(LL이었다면 우회전, RR이었다면 좌회전)
+  */
+  
+  if (cur->color == RBTREE_RED || cur == tree->root) { // cur이 RED거나 루트라면
+    cur->color = RBTREE_BLACK; // BLACK으로 바꾸고 종료 
+    return;
+  }
+
+  node_t *parent = cur->parent;
+  node_t *brother = FIND_BROTHER(cur, parent);
+
+  if (brother->color == RBTREE_RED) { // case 2: 형제가 RED인 경우
+    brother->color = RBTREE_BLACK;       // 형제 BLACK으로
+    parent->color = RBTREE_RED;          // 부모 RED로
+    if (is_left(brother)) {
+      right_rotate(tree, parent);
+    } else {
+      left_rotate(tree, parent);
+    } 
+    double_black_check(cur, tree);
+  } else {                           // case 3, 4: 형제가 BLACK인 경우
+    parent = cur->parent;
+    brother = FIND_BROTHER(cur, parent);
+    node_t *left_nephew = brother->left;
+    node_t *right_nephew = brother->right;
+    if (left_nephew->color == RBTREE_BLACK && right_nephew->color == RBTREE_BLACK) {  // case 3: 두 조카 모두 BLACK인 경우
+      brother->color = RBTREE_RED;
+      double_black_check(parent, tree); // 재귀적으로 부모에게 DOUBLY BLACK 전파
+    } else {                        // case 4: 적어도 하나의 조카는 RED인 경우
+      if (is_left(brother)) {                      // 형제가 왼쪽 자식인 경우
+        if (right_nephew->color == RBTREE_RED) {       // 오른쪽 조카(형제와 반대 방향)가 RED인 경우
+          right_nephew->color = RBTREE_BLACK;               // 오른쪽 조카를 BLACK으로
+          brother->color = RBTREE_RED;                      // 형제의 색을 RED
+          left_rotate(tree, parent);                        // 부모 좌회전 => 형제와 같은 방향의 조카가 레드로!
+          brother = FIND_BROTHER(cur, parent);              // 새로운 형제 찾기
+          left_nephew = brother->left;                      // 새로운 LL 조카 찾기
+          }
+        if (left_nephew->color == RBTREE_RED) {        // 왼쪽 조카(형제와 동일 방향)가 RED인 경우
+          brother->color = parent->color;                   // 형제 색깔을 부모의 색깔로
+          parent->color = RBTREE_BLACK;                     // 부모를 BLACK으로
+          left_nephew->color = RBTREE_BLACK;                // 왼쪽 조카를 BLACK으로
+          right_rotate(tree, parent);                       // 부모 우회전
+        }
+      } else {                                     // 형제가 오른쪽 자식인 경우
+        if (left_nephew->color == RBTREE_RED) {        // 왼쪽 조카(형제와 반대 방향)가 RED인 경우
+          left_nephew->color = RBTREE_BLACK;                // 왼쪽 조카를 BLACK으로
+          brother->color = RBTREE_RED;                      // 형제의 색을 RED
+          right_rotate(tree, parent);                       // 부모 우회전 => 형제와 같은 방향의 조카가 레드로!
+          brother = FIND_BROTHER(cur, parent);              // 새로운 형제 찾기
+          right_nephew = brother->right;                    // 새로운 RR 조카 찾기
+          }
+        if (right_nephew->color == RBTREE_RED) {       // 오른쪽 조카(형제와 동일 방향)가 RED인 경우
+          brother->color = parent->color;                   // 형제 색깔을 부모의 색깔로
+          parent->color = RBTREE_BLACK;                     // 부모를 BLACK으로
+          left_nephew->color = RBTREE_BLACK;                // 오른쪽 조카를 BLACK으로
+          left_rotate(tree, parent);                        // 부모 좌회전 
+        }
+      }
+    } 
+  }
+}
+
 rbtree *new_rbtree(void) {
   rbtree *p = (rbtree *)calloc(1, sizeof(rbtree));
 #ifdef SENTINEL
