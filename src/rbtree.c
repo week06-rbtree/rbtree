@@ -16,6 +16,29 @@ void red_red_violation_check(rbtree *tree, node_t *node);
 void double_black_check(node_t *cur, rbtree *tree);
 int is_left(node_t *cur);
 
+void postorder(rbtree *t, node_t *node) {
+  /*
+  후위순회 -> 노드 삭제 시 이용
+  */
+  if (node == t->nil) return;
+  postorder(t, node->left);
+  postorder(t, node->right);
+  free(node);
+}
+
+void inorder(const rbtree *t, node_t *node, key_t *arr, int *index, const size_t n) {
+  /*
+  중위순회
+  */
+  if (node == t->nil || *index >= (int)n) return;
+  inorder(t, node->left, arr, index, n);
+  if (*index < (int)n) {
+    arr[*index] = node->key;
+    (*index)++;
+  }
+  inorder(t, node->right, arr, index, n);
+}
+
 rbtree *new_rbtree(void) {
   rbtree *p = (rbtree *)calloc(1, sizeof(rbtree));
 #ifdef SENTINEL
