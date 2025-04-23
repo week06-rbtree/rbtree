@@ -447,9 +447,40 @@ node_t *rbtree_max(const rbtree *t) {
   return x;
 }
 
-int rbtree_erase(rbtree *t, node_t *p) {
-  // TODO: implement erase
-  return 0;
+int rbtree_erase(rbtree *t, node_t *z) {
+  #ifdef SENTINEL
+    node_t *y = z;
+    node_t *x;
+    color_t y_original_color = y->color;
+  
+    if (z->left == t->nil) {
+      x = z->right;
+      rbtree_transplant(t, z, z->right);
+    } else if (z->right == t->nil) {
+      x = z->left;
+      rbtree_transplant(t, z, z->left);
+    } else {
+      y = tree_minimum(t, z->right);
+      y_original_color = y->color;
+      x = y->right;
+      if (y->parent == z) {
+        x->parent = y;
+      } else {
+        rbtree_transplant(t, y, y->right);
+        y->right = z->right;
+        y->right->parent = y;
+      }
+      rbtree_transplant(t, z, y);
+      y->left = z->left;
+      y->left->parent = y;
+      y->color = z->color;
+    }
+    free(z);
+    if (y_original_color == RBTREE_BLACK) {
+      rbtree_erase_fixup(t, x);
+    }
+  #endif
+    return 0;
 }
 
 int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
