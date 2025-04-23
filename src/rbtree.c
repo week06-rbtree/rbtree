@@ -119,6 +119,17 @@ void insert_fixup(rbtree *t, node_t *new) {
   }
 }
 
+void rbtree_transplant(rbtree *t, node_t *u, node_t *v) {
+  if (u->parent == t->nil) {
+    t->root = v;
+  } else if (u == u->left) {
+    u->parent->left = v;
+  } else {
+    u->parent->right = v;
+  }
+  v->parent = u->parent;
+}
+
 rbtree *new_rbtree(void) {
   rbtree *p = (rbtree *)calloc(1, sizeof(rbtree));
 #ifdef SENTINEL
