@@ -484,6 +484,10 @@ int rbtree_erase(rbtree *t, node_t *z) {
 }
 
 int rbtree_to_array(const rbtree *t, key_t *arr, const size_t n) {
-  // TODO: implement to_array
+  /*
+  RB 트리를 array로
+  */
+  int index = 0;
+  inorder(t, t->root, arr, &index, n);
   return 0;
 }
