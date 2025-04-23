@@ -215,6 +215,54 @@ node_t *find_successor(node_t *cur_node, rbtree *tree) {
   return temp; // cur_node의 successor 반환
 }
 
+void red_red_violation_check(rbtree *tree, node_t *node) {
+  /*
+  부모가 RED인 경우에 대한 처리
+  1) 삼촌이 RED라면
+   부모, 삼촌을 BLACK, 조부모를 RED로 색깔 변경 후 재귀적으로 조부모에 대해 red_red_violation_check
+  2) 삼촌이 BLACK이라면
+   2-1) LR 또는 RL 이라면
+     회전시켜서 LL 또는 RR로 변환
+   2-2) LL 또는 RR 이라면
+     부모를 BLACK, 조부모를 RED로 변경한 뒤 조부모 회전
+  */
+  if (node->parent == tree->nil) return; // 노드의 부모가 없다면 바로 리턴
+  node_t *parent = node->parent;
+  node_t *grand_parent = parent->parent;
+  node_t *uncle = FIND_BROTHER(grand_parent, parent);
+  // red-red violation이 발생했다면
+  if (grand_parent != tree->nil && parent->color == RBTREE_RED && node->color == RBTREE_RED) {
+    if (uncle->color == RBTREE_RED) { // 삼촌이 RED이면
+      uncle->color = RBTREE_BLACK;
+      parent->color = RBTREE_BLACK;
+      if (grand_parent != tree->root) {
+        grand_parent->color = RBTREE_RED; // 조부모를 RED로
+        double_red_check(tree, grand_parent); // 조부모로 인해 red-red-violation이 발생할 수 있으므로 체크
+      } 
+    } else { // 삼촌이 BLACK이면
+      if (parent == grand_parent->left) {        // L
+        if (node == parent->right) {              // LR
+          left_rotate(tree, parent);                // 부모 좌회전 -> LL로
+          red_red_violation_check(tree, parent);    // 재귀적으로 red-red-violation 체크
+        } else {                                  // LL
+          grand_parent->color = RBTREE_RED;         // 조부모를 RED로
+          parent->color = RBTREE_BLACK;             // 부모를 BLACK으로
+          right_rotate(tree, grand_parent);         // 조부모 우회전
+        }
+      } else {                                   // R
+        if (node == parent->left) {               // RL
+          right_rotate(tree, parent);               // 부모 우회전 -> RR로
+          red_red_violation_check(tree, parent);    // 재귀적으로 red-red-violation 체크 
+        } else {                                  // RR 
+          grand_parent->color = RBTREE_RED;         // 조부모를 RED로
+          parent->color = RBTREE_BLACK;             // 부모를 BLACK으로
+          left_rotate(tree, grand_parent);          // 조부모 좌회전
+        }
+      }
+    }
+  }
+}
+
 rbtree *new_rbtree(void) {
   rbtree *p = (rbtree *)calloc(1, sizeof(rbtree));
 #ifdef SENTINEL
