@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define SENTINEL
+
+node_t *rbtree_minimum(const rbtree *t, node_t *x);
 void postorder(rbtree *t, node_t *node);
 void inorder(const rbtree *t, node_t *node, key_t *arr, int *index, const size_t n);
 void right_rotate(rbtree *t, node_t *target);
@@ -15,6 +18,14 @@ node_t *find_successor(node_t *cur_node, rbtree *tree);
 void red_red_violation_check(rbtree *tree, node_t *node);
 void double_black_check(node_t *cur, rbtree *tree);
 int is_left(node_t *cur);
+void delete_node(node_t *node, node_t *nil);
+
+node_t *rbtree_minimum(const rbtree *t, node_t *x) {
+  while (x->left != t->nil) {
+    x = x->left;
+  }
+  return x;
+}
 
 void postorder(rbtree *t, node_t *node) {
   /*
@@ -84,7 +95,8 @@ void left_rotate(rbtree *t, node_t *x) {
 void insert_fixup(rbtree *t, node_t *new) {
   /*
   삽입 수정
-  */ 
+  10, 5, 8, 34, 67, 23, 156, 24, 2, 12, 24, 36, 990, 25
+  */
   while (new->parent->color == RBTREE_RED) { // red-red violoation 처리 
     if (new->parent == new->parent->parent->left) { // 새로운 노드의 부모가 조부모의 왼쪽 자식이라면
       node_t *y = new->parent->parent->right; // y는 삼촌(조부모의 오른쪽 자식)
@@ -237,7 +249,7 @@ void red_red_violation_check(rbtree *tree, node_t *node) {
       parent->color = RBTREE_BLACK;
       if (grand_parent != tree->root) {
         grand_parent->color = RBTREE_RED; // 조부모를 RED로
-        double_red_check(tree, grand_parent); // 조부모로 인해 red-red-violation이 발생할 수 있으므로 체크
+        red_red_violation_check(tree, grand_parent); // 조부모로 인해 red-red-violation이 발생할 수 있으므로 체크
       } 
     } else { // 삼촌이 BLACK이면
       if (parent == grand_parent->left) {        // L
@@ -373,50 +385,64 @@ rbtree *new_rbtree(void) {
   return p;
 }
 
+// void delete_rbtree(rbtree *t) {
+//   postorder(t, t->root);
+//   free(t->nil);
+//   free(t);
+// }
+
+void delete_node(node_t *node, node_t *nil) {
+  if (node == nil) return;
+
+  delete_node(node->left, nil);
+  delete_node(node->right, nil);
+  free(node);
+}
+
 void delete_rbtree(rbtree *t) {
-  postorder(t, t->root);
+  if (t == NULL) return;
+
+  delete_node(t->root, t->nil);
   free(t->nil);
   free(t);
 }
 
 node_t *rbtree_insert(rbtree *t, const key_t key) {
 #ifdef SENTINEL
-  node_t *y = t->nil;
-  node_t *x = t->root;
+  node_t *new_node = malloc(sizeof(node_t));
+  new_node->color = RBTREE_RED;
+  new_node->key = key;
+  new_node->parent = t->nil;
+  new_node->left = t->nil;
+  new_node->right = t->nil;
 
-  // 삽입할 노드 초기화
-  node_t *new = (node_t *)calloc(1, sizeof(node_t));
-  new->color = RBTREE_RED;
-  new->key = key;
-  new->left = new->right = new->parent = NULL;
+  if (t->root == t->nil) {
+    new_node->color = RBTREE_BLACK;
+    t->root = new_node;
+  } else {
+    node_t *parent = t->nil;
+    node_t *cur = t->root;
+    while (cur != t->nil) {
+      parent = cur;
+      if (key < cur->key) {
+        cur = cur->left;
+      } else {
+        cur = cur->right;
+      }
+    }
 
-  while (x != t->nil) {
-    y = x;
-    if (new->key < x->key) {
-      x = x->left;
+    new_node->parent = parent;
+    if (key < parent->key) {
+      parent->left = new_node;
     } else {
-      x = x->right;
+      parent->right = new_node;
     }
   }
 
-  new->parent = y;
-  if (y == t->nil) {
-    t->root = new;
-  } else if (new->key < y->key) {
-    new->left = new;
-  } else {
-    y->left = new;
-  }
+  insert_fixup(t, new_node);
 
-  new->left = t->nil;
-  new->right = t->nil;
-  new->color = RBTREE_RED;
-
-  insert_fixup(t, new);
-
-  t->root->color = RBTREE_BLACK;
 #endif
-  return t->root;
+  return new_node;
 }
 
 node_t *rbtree_find(const rbtree *t, const key_t key) {
@@ -460,7 +486,7 @@ int rbtree_erase(rbtree *t, node_t *z) {
       x = z->left;
       rbtree_transplant(t, z, z->left);
     } else {
-      y = tree_minimum(t, z->right);
+      y = rbtree_minimum(t, z->right);
       y_original_color = y->color;
       x = y->right;
       if (y->parent == z) {
@@ -477,6 +503,7 @@ int rbtree_erase(rbtree *t, node_t *z) {
     }
     free(z);
     if (y_original_color == RBTREE_BLACK) {
+      // double_black_check(x, t);
       rbtree_erase_fixup(t, x);
     }
   #endif
