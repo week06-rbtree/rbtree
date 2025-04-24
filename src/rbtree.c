@@ -98,37 +98,45 @@ void insert_fixup(rbtree *t, node_t *new) {
   10, 5, 8, 34, 67, 23, 156, 24, 2, 12, 24, 36, 990, 25
   */
   while (new->parent->color == RBTREE_RED) { // red-red violoation 처리 
-    if (new->parent == new->parent->parent->left) { // 새로운 노드의 부모가 조부모의 왼쪽 자식이라면
+    if (new->parent == new->parent->parent->left) { // 새로운 노드의 부모가 조부모의 왼쪽 자식이라면 (L)
       node_t *y = new->parent->parent->right; // y는 삼촌(조부모의 오른쪽 자식)
       if (y->color == RBTREE_RED) { // 삼촌의 색깔이 RED라면
-        new->parent->color = RBTREE_BLACK; // 부모의 색깔을 BLACK으로
-        y->color = RBTREE_BLACK;
-        new->parent->parent->color = RBTREE_RED;
-        new = new->parent->parent;
-      } else if (new == new->parent->left) { // 새로운 노드가 왼쪽 자식이라면
+        new->parent->color = RBTREE_BLACK; // 부모 색깔을 BLACK으로
+        y->color = RBTREE_BLACK; // 삼촌 색깔을 BLACK으로
+        new->parent->parent->color = RBTREE_RED; // 조부모 색깔을 RED로
+        new = new->parent->parent; // 조부모를 new로
+      } else if (new == new->parent->right) { // 삼촌 BLACK & 새로운 노드가 오른쪽 자식이라면
         new = new->parent; // 새로운 노드를 부모로
         left_rotate(t, new); // 새로운 노드 좌회전
-      } else { // 새로운 노드가 오른쪽이라면
-        new->parent->color = RBTREE_BLACK; // 부모의 색깔을 BLACK으로
-        new->parent->parent->color = RBTREE_RED; // 조부모의 색깔을 RED로
-        right_rotate(t, new->parent->parent); // 조부모 우회전  
       }
-    } else { // 새로운 노드의 부모가 조부모의 오른쪽 자식이라면
-      node_t *y = new->parent->parent->left; 
-      if (y->color == RBTREE_RED) {
-        new->parent->color = RBTREE_BLACK;
-        y->color = RBTREE_BLACK;
-        new->parent->parent->color = RBTREE_RED;
-        new = new->parent->parent;
-      } else if (new == new->parent->right) {
-        new = new->parent;
-        right_rotate(t, new);
-        new->parent->color = RBTREE_BLACK;
-        new->parent->parent->color = RBTREE_RED;
-        left_rotate(t, new->parent->parent);
+        else {
+        if (new == new->parent->left) {  // 왼쪽 자식이면
+          new->parent->color = RBTREE_BLACK; // 부모의 색깔을 BLACK으로
+          new->parent->parent->color = RBTREE_RED; // 조부모의 색깔을 RED로
+          right_rotate(t, new->parent->parent); // 조부모 우회전  
+        }
+      }
+    } else { // 새로운 노드의 부모가 조부모의 오른쪽 자식이라면 (R)
+      node_t *y = new->parent->parent->left; // y는 삼촌(조부모의 왼쪽 자식)
+      if (y->color == RBTREE_RED) { // 삼촌의 색깔이 RED라면
+        new->parent->color = RBTREE_BLACK; // 부모 색깔을 BLACK으로
+        y->color = RBTREE_BLACK; // 삼촌 색깔을 BLACK으로
+        new->parent->parent->color = RBTREE_RED; // 조부모 색깔을 RED로
+        new = new->parent->parent; // 조부모를 new로
+      } else if (new == new->parent->left) { // 삼촌 BLACK & 새로운 노드가 왼쪽 자식이라면
+        new = new->parent; // 새로운 노드를 부모로
+        right_rotate(t, new); // 새로운 노드 우회전
+      }
+      else {
+        if (new == new->parent->right) {  // 오른쪽 자식이면
+          new->parent->color = RBTREE_BLACK; // 부모의 색깔을 BLACK으로
+          new->parent->parent->color = RBTREE_RED; // 조부모의 색깔을 RED로
+          left_rotate(t, new->parent->parent); // 조부모 좌회전  
+        }
       }
     }
   }
+  t->root->color = RBTREE_BLACK; 
 }
 
 void rbtree_transplant(rbtree *t, node_t *u, node_t *v) {
@@ -157,7 +165,7 @@ void rbtree_erase_fixup(rbtree *t, node_t *x) {
           w->color = RBTREE_RED;
           x = x->parent;
         } else if (w->right->color == RBTREE_BLACK) {
-          w->left->color == RBTREE_BLACK;
+          w->left->color = RBTREE_BLACK;
           w->color = RBTREE_RED;
           right_rotate(t, w);
           w = x->parent->right;
@@ -180,7 +188,7 @@ void rbtree_erase_fixup(rbtree *t, node_t *x) {
           w->color = RBTREE_RED;
           x = x->parent;
         } else if (w->left->color == RBTREE_BLACK) {
-          w->right->color == RBTREE_BLACK;
+          w->right->color = RBTREE_BLACK;
           w->color = RBTREE_RED;
           left_rotate(t, w);
           w = x->parent->left;
@@ -503,8 +511,8 @@ int rbtree_erase(rbtree *t, node_t *z) {
     }
     free(z);
     if (y_original_color == RBTREE_BLACK) {
-      // double_black_check(x, t);
-      rbtree_erase_fixup(t, x);
+      double_black_check(x, t);
+      // rbtree_erase_fixup(t, x);
     }
   #endif
     return 0;
